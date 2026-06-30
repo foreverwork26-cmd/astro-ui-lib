@@ -571,16 +571,13 @@ These workloads will run on dedicated systems.
 
 # Future Discussion Topics
 
-- Hardware selection
-- CPU requirements
-- RAM requirements
-- Storage requirements
 - AI acceleration and dedicated AI machine sizing
 - Backup strategy details
 - Network topology
 - Disaster recovery
 - Sensor ecosystem and device shopping list
 - Dashboard technology stack for the custom portal
+- UPS and Zigbee dongle selection
 
 ---
 
@@ -602,6 +599,51 @@ Priority order:
 3. Responsiveness
 4. Upgradeability
 5. Raw performance
+
+---
+
+## Minimum Requirements (filter checklist)
+
+Use this checklist to quickly rule out machines on any site (Interlink, OLX, eBay, etc.).
+
+### Must have
+
+| Requirement | Minimum | Preferred | Why |
+|-------------|---------|-----------|-----|
+| **CPU** | Intel Core i5 **T-series** (8th–10th gen) or Ryzen 5 **U-series** | i5-9500T, i5-8500T, i5-10500T | 6 cores, ~35 W TDP — quiet and efficient for 24/7 |
+| **RAM** | **16 GB** DDR4 | 32 GB (or 16 GB + upgrade path) | HA + PostgreSQL + Docker stack needs headroom |
+| **Storage** | **512 GB SSD** | 512 GB+ NVMe M.2, or 1 TB | Docker images, databases, logs grow over time |
+| **Form factor** | Business mini PC | Dell OptiPlex / HP ProDesk / Lenovo ThinkCentre Tiny | Reliability, cooling, Linux support |
+| **Network** | Gigabit Ethernet | — | Enough for HA, cameras, remote access |
+| **USB** | 4+ ports | — | Zigbee coordinator, UPS, spare |
+| **RAM slots** | 2 slots | — | Upgrade later without replacing all RAM |
+
+### Strong preference
+
+- **NVMe M.2** explicitly stated (SATA SSD is acceptable but confirm type)
+- **Refurbished business** mini PC with 36-month warranty
+- **T-series or U-series** suffix on CPU model (see avoid list below)
+- Room in budget for **UPS** and **Zigbee USB dongle** after the PC
+
+### Priority order when tradeoffs exist
+
+When you cannot get everything, prioritize in this order:
+
+1. **T-series CPU** (24/7 suitability beats newer non-T chips)
+2. **16 GB RAM** (beats 11th gen with 8 GB)
+3. **512 GB SSD** (beats 256 GB + slightly newer CPU)
+4. **32 GB RAM or upgrade path** (beats CPU generation bump within 8th–10th gen)
+5. **CPU generation** (8500T vs 9500T vs 10500T — smallest impact for this workload)
+
+**Rule of thumb:** i5-8500T + 32 GB beats i5-11500 + 16 GB for this home server. RAM and T-series matter more than generation.
+
+### Nice to have (not required)
+
+- 1 TB SSD
+- 32 GB RAM pre-installed
+- Windows Pro (irrelevant if installing Linux)
+- Keyboard/mouse included
+- 2.5 GbE (only useful if the rest of the network is 2.5G)
 
 ---
 
@@ -797,13 +839,15 @@ Alternative:
 
 ## RAM
 
-32 GB DDR4
+- **Minimum:** 16 GB DDR4
+- **Preferred:** 32 GB DDR4 (or 16 GB on main host + separate AI machine)
 
 ---
 
 ## Storage
 
-1 TB NVMe SSD
+- **Minimum:** 512 GB SSD (NVMe preferred)
+- **Preferred:** 1 TB NVMe SSD
 
 ---
 
@@ -835,25 +879,35 @@ Optional:
 
 ## Hardware
 
-- Raspberry Pi
-- Intel Celeron
+- Raspberry Pi (as primary hub — acceptable only for secondary roles like a remote coordinator)
+- Intel Celeron / Pentium
 - Very old Intel NUCs (6th–7th Generation)
 - HDD-only systems
 - eMMC storage
+- **Non-T / non-U CPUs** in always-on roles (e.g. i5-9500, i5-11500 at 65 W — hotter, louder, more power than i5-9500T)
+- **8 GB RAM** as shipped without a cheap upgrade path to 16 GB
+- **256 GB storage** as final config (too tight once Docker and databases grow)
+- Consumer mini PCs with no RAM upgrade path (soldered RAM)
+
+## Overpriced for this use case
+
+- Newer generation (11th gen+) with only 8–16 GB RAM and no 32 GB upgrade option, at premium refurb prices
+- Paying for Windows Pro, keyboard, or monitor bundles when the machine will run headless Linux
 
 ---
 
 # Budget Recommendations
 
-## Around 2000 RON
+## Around 2000 RON (~400 USD)
 
-Look for refurbished business mini PCs with:
+Realistic target on Interlink:
 
-- Intel Core i5 (9th or 10th Generation)
-- 32 GB RAM
-- 1 TB NVMe SSD
+- Intel Core i5 **T-series** (8500T / 9400T / 9500T)
+- **16 GB** RAM
+- **512 GB** SSD (M.2 NVMe preferred)
+- Leaves ~400–500 RON for UPS + Zigbee dongle
 
-This configuration offers the best value for money.
+32 GB + 1 TB at this price usually requires buying 16 GB now and upgrading RAM/SSD yourself later, or finding a deal on a Dell OptiPlex with seller-installed upgrades.
 
 ---
 
@@ -874,9 +928,107 @@ With CPUs like:
 The higher budget is justified only if:
 
 - Buying new hardware is preferred
-- Lower power consumption is desired
+- Seller-installed **32 GB RAM** upgrade (e.g. Dell OptiPlex 5060 +721 RON option)
 - Longer expected hardware lifespan is important
-- Better integrated graphics or newer platform features are beneficial
+- A **second mini PC** for dedicated local AI (Ollama + 7B) is included in the budget
+
+---
+
+# Interlink Shortlist (refurbished)
+
+> Researched: Interlink.ro — prices include listed discounts where shown; confirm at checkout.
+> Retailer phone: **031.620.73.24** (useful for pre-sale questions below).
+
+## Recommended picks
+
+### 1. Best value — HP ProDesk 400 G5 (primary recommendation)
+
+| | |
+|---|---|
+| **Link** | [HP ProDesk 400 G5 — i5-9500T](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602) |
+| **CPU** | Intel Core i5-**9500T** (6 cores, 35 W) |
+| **Base** | 8 GB RAM, 256 GB M.2 SSD — **~1,060 RON** |
+| **Recommended config** | +16 GB RAM (+250), +512 GB SSD (+220) → **~1,530 RON** |
+| **Why** | Best price/performance; explicit M.2; correct T-series CPU; leaves budget for UPS + Zigbee dongle |
+| **AI plan** | Main server only; add a second mini PC later for Ollama if 7B is too slow |
+
+### 2. Best upgrade path — Dell OptiPlex 5060
+
+| | |
+|---|---|
+| **Link** | [Dell OptiPlex 5060 — i5-8500T](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492) |
+| **CPU** | Intel Core i5-**8500T** (6 cores, 35 W) |
+| **Base** | **16 GB** RAM, **512 GB** SSD — **~1,627 RON** |
+| **Optional upgrades** | +32 GB RAM (+721) → ~2,348 RON; +1 TB SSD (+451) → add to above |
+| **Why** | Only Interlink listing with **32 GB RAM upgrade**; strong base config out of the box |
+| **Caveat** | Listing says "SSD" not "NVMe" — confirm drive type before buying (see questions below) |
+
+### 3. Best budget alternative — Lenovo ThinkCentre M720q
+
+| | |
+|---|---|
+| **Link (Win Home)** | [Lenovo M720q — i5-9400T](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572) — **~1,150 RON** base |
+| **Link (Win Pro)** | [Lenovo M720q — i5-9400T Pro](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77573) — **~1,348 RON** base |
+| **CPU** | Intel Core i5-**9400T** (6 cores, 35 W) |
+| **Recommended config** | +16 GB RAM (+250), +512 GB SSD (+220) → **~1,620 RON** (Home) / **~1,818 RON** (Pro) |
+| **Why** | Explicit **NVMe**; includes keyboard + mouse; 5-star reviews |
+| **Note** | 9400T is slightly older than 9500T — negligible difference for this workload. Prefer Home version if installing Linux (cheaper). |
+
+## Comparison table
+
+| Product | CPU | Base price | Configured (16 GB / 512 GB) | NVMe stated? | 32 GB upgrade? |
+|---------|-----|------------|----------------------------|--------------|----------------|
+| [HP ProDesk 400 G5](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602) | i5-9500T | ~1,060 RON | **~1,530 RON** | Yes (M.2) | No (DIY later) |
+| [Dell OptiPlex 5060](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492) | i5-8500T | ~1,627 RON | **included in base** | Confirm with seller | **Yes (+721 RON)** |
+| [Lenovo M720q](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572) | i5-9400T | ~1,150 RON | **~1,620 RON** | Yes (NVMe) | No (DIY later) |
+
+## Skip list (Interlink)
+
+| Product | Link | Why skip |
+|---------|------|----------|
+| HP ProDesk 600 G5 | [i5-9500 (non-T)](https://www.interlink.ro/calculator-refurbished-hp-prodesk-600-g5-minipc-intel-core-i5-95-second-hand-p76608) | **i5-9500** without T — 65 W, not ideal for 24/7; same price band as 400 G5 T-model |
+| HP EliteDesk 800 G8 | [i5-11500 (non-T)](https://www.interlink.ro/calculator-hp-elitedesk-800-g8-mini-pc-intel-core-i5-refurbished-p76200) | **~3,028 RON** for 16 GB / 512 GB max; non-T CPU; no 32 GB option — poor value |
+
+## Deployment recommendation
+
+```
+Option A (recommended):  HP ProDesk 400 G5 or Lenovo M720q — 16 GB / 512 GB (~1,530–1,620 RON)
+                         → main server: Home Assistant + Docker infra
+                         → later: second mini PC for Ollama + 7B if needed
+
+Option B (one box longer):  Dell OptiPlex 5060 — 16 GB now, upgrade to 32 GB later (~1,627 → ~2,348 RON)
+                         → 32 GB helps RAM pressure; does not fix slow CPU inference for 7B models
+```
+
+---
+
+# Questions to Ask Interlink (or any seller)
+
+Call **031.620.73.24** before ordering, especially for the Dell OptiPlex.
+
+### Storage
+
+1. Is the SSD **NVMe M.2** or **2.5" SATA**? (Dell 5060 listing is ambiguous.)
+2. Is there a **second drive bay** or free M.2 slot for adding storage later?
+3. If ordering an SSD upgrade, does it replace the existing drive or add a second one?
+
+### Memory
+
+4. How many **RAM slots** are populated? How many total (usually 2)?
+5. What is the **maximum RAM** supported?
+6. For models without a 32 GB upgrade option: can Interlink install **32 GB** on request, or is DIY upgrade with a purchased SO-DIMM the only path?
+
+### Physical / homelab fit
+
+7. How many **USB ports** (front + back)? Need at least one permanently free for Zigbee coordinator; one for UPS if USB-connected.
+8. Is **Wi-Fi** included? (Not required if using Ethernet.)
+9. Does the unit include a **VESA mount** or bracket?
+
+### Purchase / warranty
+
+10. Can Windows be **removed/replaced with Linux** without affecting warranty?
+11. What exactly is covered under the **36-month warranty** for refurbished units?
+12. If ordering upgrades (RAM/SSD), are they **installed and tested** before shipping?
 
 ---
 
@@ -884,13 +1036,24 @@ The higher budget is justified only if:
 
 ## Preferred Option
 
-A refurbished business mini PC.
+A refurbished business mini PC matching the [filter checklist](#minimum-requirements-filter-checklist) above.
 
-Suggested configuration:
+**Interlink shortlist (pick one):**
 
-- **CPU:** Intel Core i5-9500T or i5-10500T
-- **RAM:** 32 GB DDR4
-- **Storage:** 1 TB NVMe SSD
+1. **[HP ProDesk 400 G5 — i5-9500T](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602)** — best value; configure 16 GB + 512 GB M.2 (~1,530 RON)
+2. **[Dell OptiPlex 5060 — i5-8500T](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492)** — best if 32 GB upgrade path matters (~1,627 RON base, already 16/512)
+3. **[Lenovo M720q — i5-9400T](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572)** — solid alternative with explicit NVMe (~1,620 RON configured)
+
+**Target configuration (any seller):**
+
+- **CPU:** Intel Core i5 **T-series** (8500T / 9500T / 10500T) or Ryzen 5 U-series
+- **RAM:** **16 GB minimum**, 32 GB preferred (or separate AI machine later)
+- **Storage:** **512 GB SSD minimum**, NVMe preferred, 1 TB ideal
+
+**Also budget for (not included in PC price):**
+
+- UPS with USB (NUT integration)
+- Zigbee USB coordinator (e.g. Sonoff ZBDongle-E, ConBee III)
 
 This configuration is expected to comfortably run:
 
@@ -901,9 +1064,8 @@ This configuration is expected to comfortably run:
 - Household wiki
 - Monitoring stack
 - Notification services
-- Lightweight local AI assistant
 
-while maintaining low power consumption, high reliability and room for future expansion.
+Local AI (Ollama + 7B) should run on a **dedicated second machine** if response speed matters; the main server focuses on reliability for home automation — low power consumption, high reliability, and room for future expansion.
 
 ---
 
