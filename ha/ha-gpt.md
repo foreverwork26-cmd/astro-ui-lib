@@ -8,7 +8,7 @@
 >
 > **Local AI (out of scope):** Model training, fine-tuning, large models (13B+), dedicated GPU, always-on high-throughput inference.
 >
-> **Expectation:** Most intelligence should come from calling Home Assistant and other APIs; the LLM is a thin routing and language layer. If local inference feels too slow on the main server, run the AI stack on a **separate dedicated machine** rather than compromising responsiveness of home automation.
+> **Expectation:** Most intelligence should come from calling Home Assistant and other APIs; the LLM is a thin routing and language layer. More RAM lets a local model fit alongside Docker services; CPU inference will still be slow without a GPU. Upgrade RAM on the chosen platform (up to 64 GB) before buying a second machine for speed.
 
 ---
 
@@ -30,7 +30,7 @@ The server should:
 - **MQTT** (Mosquitto) is the primary integration bus between services today; a dedicated event bus (e.g. NATS) is a later optimization.
 - **The Home Portal is a thin client** — aggregates data from Home Assistant, calendar, and wiki; it does not duplicate automation logic or device control.
 - **Phase deployments** — not everything ships at once; see roadmap below.
-- **One machine to start** — Docker Compose on a single host is enough; split workloads onto a second machine only when performance or reliability requires it (most likely: local AI).
+- **One machine** — the chosen HP ProDesk 400 G5 can run the full stack. Upgrade RAM to 32–64 GB if running local AI on the same host. A second machine is only for faster inference, not because RAM is capped.
 
 ---
 
@@ -266,7 +266,7 @@ Data source: go2rtc streams embedded in the portal or linked from Home Assistant
 
 - Chat interface, suggestions, daily summary, quick actions
 
-Data source: local AI agent (see §4); runs on the home server or a dedicated AI machine.
+Data source: local AI agent (see §4); runs on the same HP host (upgrade RAM as needed).
 
 ---
 
@@ -286,14 +286,12 @@ The AI should act as a **Home Agent** rather than a general-purpose chatbot.
 
 | Option | When |
 |--------|------|
-| **Same machine as Home Assistant** | Small models (3B–4B), occasional short queries, acceptable latency |
-| **Dedicated AI machine** | 7B models, frequent use, or when responses must feel snappy |
+| **Same machine (HP ProDesk 400 G5)** | Default. Start with 16 GB RAM; upgrade to **32 GB** for 7B + Docker, or **64 GB** for maximum headroom. Platform supports up to 64 GB anytime. |
+| **Dedicated second machine** | Only if CPU inference speed is unacceptable — not because the HP runs out of RAM. |
 
-**Model size:** 7B is **capable enough** for this use case — most answers come from calling Home Assistant tools (sensor lookups, calendar queries), not from the model's own knowledge. The LLM understands natural language and decides which tool to call.
+**Model size:** 7B is **capable enough** for this use case — most answers come from calling Home Assistant tools (sensor lookups, calendar queries), not from the model's own knowledge.
 
-**Speed reality:** A 7B model on a CPU-only home server (no GPU) will feel **slow** for anything beyond short replies — often several seconds to tens of seconds. If that is unacceptable, run Ollama (or similar) on a **separate mini PC** with 32 GB RAM rather than sharing CPU with Home Assistant.
-
-Optional: cloud API fallback for non-sensitive general questions only (weather, news) if local speed is insufficient.
+**Speed reality:** A 7B model on CPU (no GPU) will feel **slow** for long replies. More RAM helps the model **fit in memory**; it does not make inference fast. Accept slow responses, or add a second machine / GPU later for speed.
 
 ## Home Knowledge
 
@@ -463,7 +461,7 @@ Services should react to events instead of tightly coupling to each other.
 ## Performance
 
 - Responsive UI
-- Fast AI responses (may require a dedicated AI machine for local LLM)
+- Fast AI responses — limited by CPU without GPU; upgrade RAM first, accept slower inference, or add GPU/second machine later for speed
 - Fast dashboard loading
 
 ---
@@ -527,7 +525,7 @@ These workloads will run on dedicated systems.
               ┌───────────┴───────────┐
               │                       │
         Home Assistant          Local AI Agent
-        (source of truth)    (same host or dedicated)
+        (source of truth)         (same host)
               │                       │
       ┌───────┴────────┐        ┌─────┴────────┐
       │                │        │              │
@@ -548,10 +546,11 @@ These workloads will run on dedicated systems.
 
 ---
 
-# Decisions (TBD)
+# Decisions
 
-| Topic | Current lean |
-|-------|----------------|
+| Topic | Decision |
+|-------|----------|
+| **Hardware** | **HP ProDesk 400 G5** — i5-9500T, 16 GB / 512 GB M.2 NVMe (Interlink) |
 | OS | Debian or Ubuntu Server LTS |
 | Orchestration | Docker Compose on bare metal |
 | DNS / ad blocking | Pi-hole |
@@ -563,7 +562,7 @@ These workloads will run on dedicated systems.
 | Long-term graphs | InfluxDB + Grafana |
 | Calendar | CalDAV sync (Google/Apple) |
 | Wiki | BookStack or Wiki.js |
-| AI runtime | Ollama + 7B model (quantized); dedicated machine if too slow on main host |
+| AI runtime | Ollama + 7B (quantized) on same host; upgrade RAM to 32–64 GB as needed |
 | Cameras | go2rtc for viewing; Frigate only if motion detection is needed (adds CPU load) |
 | Notifications | Home Assistant app + Apprise |
 
@@ -571,7 +570,6 @@ These workloads will run on dedicated systems.
 
 # Future Discussion Topics
 
-- AI acceleration and dedicated AI machine sizing
 - Backup strategy details
 - Network topology
 - Disaster recovery
@@ -610,18 +608,19 @@ Use this checklist to quickly rule out machines on any site (Interlink, OLX, eBa
 
 | Requirement | Minimum | Preferred | Why |
 |-------------|---------|-----------|-----|
-| **CPU** | Intel Core i5 **T-series** (8th–10th gen) or Ryzen 5 **U-series** | i5-9500T, i5-8500T, i5-10500T | 6 cores, ~35 W TDP — quiet and efficient for 24/7 |
-| **RAM** | **16 GB** DDR4 | 32 GB (or 16 GB + upgrade path) | HA + PostgreSQL + Docker stack needs headroom |
-| **Storage** | **512 GB SSD** | 512 GB+ NVMe M.2, or 1 TB | Docker images, databases, logs grow over time |
-| **Form factor** | Business mini PC | Dell OptiPlex / HP ProDesk / Lenovo ThinkCentre Tiny | Reliability, cooling, Linux support |
+| **CPU** | Intel Core i5 **T-series** (8th–10th gen) or Ryzen 5 **U-series** | **i5-9500T** (chosen) | 6 cores, ~35 W TDP — quiet and efficient for 24/7 |
+| **RAM** | **16 GB** DDR4 | 32–64 GB upgrade path | HA + Docker; 32 GB+ if local AI on same host |
+| **Storage** | **512 GB SSD** | 512 GB M.2 NVMe | Docker images, databases, logs |
+| **Form factor** | Business mini PC | HP ProDesk Mini | Reliability, cooling, Linux support |
+| **Max RAM (platform)** | 32 GB | **64 GB** | Required ceiling if local AI runs on same host |
 | **Network** | Gigabit Ethernet | — | Enough for HA, cameras, remote access |
 | **USB** | 4+ ports | — | Zigbee coordinator, UPS, spare |
 | **RAM slots** | 2 slots | — | Upgrade later without replacing all RAM |
 
 ### Strong preference
 
-- **NVMe M.2** explicitly stated (SATA SSD is acceptable but confirm type)
-- **Refurbished business** mini PC with 36-month warranty
+- **NVMe M.2** explicitly stated on the listing
+- **64 GB RAM ceiling** if local AI may run on the same host (HP ProDesk 400 G5 qualifies; Dell OptiPlex 5060 Micro caps at 32 GB — rejected for this reason)
 - **T-series or U-series** suffix on CPU model (see avoid list below)
 - Room in budget for **UPS** and **Zigbee USB dongle** after the PC
 
@@ -632,10 +631,10 @@ When you cannot get everything, prioritize in this order:
 1. **T-series CPU** (24/7 suitability beats newer non-T chips)
 2. **16 GB RAM** (beats 11th gen with 8 GB)
 3. **512 GB SSD** (beats 256 GB + slightly newer CPU)
-4. **32 GB RAM or upgrade path** (beats CPU generation bump within 8th–10th gen)
-5. **CPU generation** (8500T vs 9500T vs 10500T — smallest impact for this workload)
+4. **64 GB RAM ceiling** (beats 32 GB platform cap — rules out Dell OptiPlex 5060 Micro)
+5. **CPU generation** (8500T vs 9500T — small impact; 9500T chosen)
 
-**Rule of thumb:** i5-8500T + 32 GB beats i5-11500 + 16 GB for this home server. RAM and T-series matter more than generation.
+**Rule of thumb:** A higher base price does **not** mean a better machine — compare equal configs (16 GB / 512 GB). The Dell OptiPlex 5060 costs more at base because it includes more RAM/SSD, not because it has a newer CPU (it does not).
 
 ### Nice to have (not required)
 
@@ -704,8 +703,9 @@ With AI on this host:
 
 ### Recommendation
 
-- **Minimum:** 16 GB
-- **Recommended:** 32 GB (or 16 GB on main host + separate AI machine with 32 GB)
+- **Buy:** 16 GB (configured on Interlink)
+- **Upgrade later if needed:** 32 GB for local AI + full Docker stack; up to **64 GB** supported on this platform
+- Dell OptiPlex 5060 Micro caps at 32 GB — not chosen despite Interlink offering a 32 GB upgrade
 
 ---
 
@@ -728,135 +728,32 @@ Expected usage:
 
 ### Recommendation
 
-- **Minimum:** 512 GB NVMe SSD
-- **Recommended:** 1 TB NVMe SSD
-
-Reasons:
-
-- Better endurance
-- More free space for future services
-- Small price difference
-- Better performance
+- **Buy:** 512 GB M.2 NVMe (configured on Interlink)
+- NVMe vs SATA matters less than capacity for a 24/7 server; HP listing confirms NVMe
 
 ---
 
 # CPU Recommendations
 
-## Recommended CPU Families
+**Chosen:** Intel Core i5-**9500T** (9th gen, 6 cores, 35 W).
 
-### Intel
+Other T-series chips (8500T, 10500T) are fine but offer negligible gain for this workload. CPU generation was **not** a reason to pick the more expensive Dell base config (8500T is older than 9500T).
 
-- Core i5 8th Generation
-- Core i5 9th Generation
-- Core i5 10th Generation
-
-Examples:
-
-- i5-8500T
-- i5-9500T
-- i5-10500T
-
----
-
-### AMD
-
-- Ryzen 5 4000 Series
-- Ryzen 5 5000 Series
-
-Examples:
-
-- Ryzen 5 5600U
-- Ryzen 5 5650U
-
----
-
-# Preferred Platform
-
-## Business Mini PCs
-
-Preferred manufacturers:
-
-- Lenovo ThinkCentre Tiny
-- HP ProDesk Mini
-- Dell OptiPlex Micro
-
-Advantages:
-
-- Enterprise-grade reliability
-- Very quiet
-- Low power consumption (typically 8–20 W)
-- NVMe support
-- Two RAM slots
-- Excellent Linux compatibility
-- Small footprint
-- Readily available refurbished
-
----
-
-# Alternative
+# Alternative (not chosen)
 
 ## Intel N100 Mini PCs
 
-Advantages:
+Rejected — 32 GB RAM ceiling on most models, weak CPU for Docker + local AI growth.
 
-- Very low power consumption
-- Silent
-- Brand new hardware
-- Affordable
+# Recommended Configuration (chosen)
 
-Limitations:
-
-- Lower CPU performance
-- Upgradeability depends on the model
-- May become limiting as more services are added
-
-Suitable for:
-
-- Home Assistant
-- Pi-hole
-- Small Docker stacks
-
-Less suitable for:
-
-- Growing ecosystems
-- Local AI
-- Larger numbers of containers
-
----
-
-# Recommended Configuration
-
-## CPU
-
-- Intel Core i5-9500T
-- Intel Core i5-10500T
-
-Alternative:
-
-- Ryzen 5 5600U
-
----
-
-## RAM
-
-- **Minimum:** 16 GB DDR4
-- **Preferred:** 32 GB DDR4 (or 16 GB on main host + separate AI machine)
-
----
-
-## Storage
-
-- **Minimum:** 512 GB SSD (NVMe preferred)
-- **Preferred:** 1 TB NVMe SSD
-
----
-
-## Network
-
-- Gigabit Ethernet minimum
-- 2.5 GbE preferred (not mandatory)
-
----
+| Component | Spec |
+|-----------|------|
+| **Model** | HP ProDesk 400 G5 Desktop Mini |
+| **CPU** | Intel Core i5-9500T |
+| **RAM** | 16 GB DDR4 now → upgrade to 32 or 64 GB anytime |
+| **Storage** | 512 GB M.2 PCIe NVMe |
+| **Max RAM (platform)** | 64 GB |
 
 # Features to Look For
 
@@ -891,8 +788,8 @@ Optional:
 
 ## Overpriced for this use case
 
-- Newer generation (11th gen+) with only 8–16 GB RAM and no 32 GB upgrade option, at premium refurb prices
-- Paying for Windows Pro, keyboard, or monitor bundles when the machine will run headless Linux
+- Platforms with **32 GB RAM max** if local AI may run on the same host (e.g. Dell OptiPlex 5060 Micro)
+- Assuming **higher base price = better machine** — compare equal RAM/SSD configs instead
 
 ---
 
@@ -900,172 +797,97 @@ Optional:
 
 ## Around 2000 RON (~400 USD)
 
-Realistic target on Interlink:
+**Chosen config** on Interlink:
 
-- Intel Core i5 **T-series** (8500T / 9400T / 9500T)
-- **16 GB** RAM
-- **512 GB** SSD (M.2 NVMe preferred)
-- Leaves ~400–500 RON for UPS + Zigbee dongle
-
-32 GB + 1 TB at this price usually requires buying 16 GB now and upgrading RAM/SSD yourself later, or finding a deal on a Dell OptiPlex with seller-installed upgrades.
+- [HP ProDesk 400 G5](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602) — 16 GB + 512 GB M.2 NVMe → **~1,530 RON**
+- Remaining budget → UPS + Zigbee dongle
 
 ---
 
 ## Around 3000 RON
 
-Consider newer mini PCs such as:
-
-- Beelink
-- Minisforum
-- GMKtec
-
-With CPUs like:
-
-- Ryzen 5 5600U
-- Ryzen 7 5800U
-- Recent Intel Core i5 U-series
-
-The higher budget is justified only if:
-
-- Buying new hardware is preferred
-- Seller-installed **32 GB RAM** upgrade (e.g. Dell OptiPlex 5060 +721 RON option)
-- Longer expected hardware lifespan is important
-- A **second mini PC** for dedicated local AI (Ollama + 7B) is included in the budget
+Not needed for the chosen HP configuration. Reserve budget for UPS, Zigbee dongle, and optional RAM upgrade sticks instead of a pricier PC SKU.
 
 ---
 
-# Interlink Shortlist (refurbished)
+# Hardware Conclusion
 
-> Researched: Interlink.ro — prices include listed discounts where shown; confirm at checkout.
-> Retailer phone: **031.620.73.24** (useful for pre-sale questions below).
+## Chosen machine
 
-## Recommended picks
-
-### 1. Best value — HP ProDesk 400 G5 (primary recommendation)
+**[HP ProDesk 400 G5 — i5-9500T](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602)** from Interlink.
 
 | | |
 |---|---|
-| **Link** | [HP ProDesk 400 G5 — i5-9500T](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602) |
-| **CPU** | Intel Core i5-**9500T** (6 cores, 35 W) |
-| **Base** | 8 GB RAM, 256 GB M.2 SSD — **~1,060 RON** |
-| **Recommended config** | +16 GB RAM (+250), +512 GB SSD (+220) → **~1,530 RON** |
-| **Why** | Best price/performance; explicit M.2; correct T-series CPU; leaves budget for UPS + Zigbee dongle |
-| **AI plan** | Main server only; add a second mini PC later for Ollama if 7B is too slow |
+| **Order config** | Base + **16 GB RAM** (+250 RON) + **512 GB SSD** (+220 RON) → **~1,530 RON** |
+| **CPU** | i5-9500T (9th gen, 6 cores, 35 W) |
+| **Storage** | M.2 PCIe NVMe — confirmed on listing and [HP specs](https://support.hp.com/document/c06403257) |
+| **RAM now** | 16 GB |
+| **RAM later** | Upgrade to **32 GB** (local AI + Docker) or **64 GB** (maximum headroom) — platform supports up to 64 GB via 2× SODIMM |
+| **Official docs** | [HP 400 G5 Mini specifications](https://support.hp.com/document/c06403257) |
 
-### 2. Best upgrade path — Dell OptiPlex 5060
+### Why HP beats Dell (same job, equal config)
 
-| | |
-|---|---|
-| **Link** | [Dell OptiPlex 5060 — i5-8500T](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492) |
-| **CPU** | Intel Core i5-**8500T** (6 cores, 35 W) |
-| **Base** | **16 GB** RAM, **512 GB** SSD — **~1,627 RON** |
-| **Optional upgrades** | +32 GB RAM (+721) → ~2,348 RON; +1 TB SSD (+451) → add to above |
-| **Why** | Only Interlink listing with **32 GB RAM upgrade**; strong base config out of the box |
-| **Caveat** | Listing says "SSD" not "NVMe" — confirm drive type before buying (see questions below) |
+Compared at **16 GB / 512 GB** (~1,530 RON HP vs ~1,627 RON Dell base):
 
-### 3. Best budget alternative — Lenovo ThinkCentre M720q
+| | HP ProDesk 400 G5 | Dell OptiPlex 5060 Micro |
+|---|-------------------|--------------------------|
+| CPU | **i5-9500T** (9th gen) | i5-8500T (8th gen) |
+| Storage | **NVMe confirmed** | NVMe or SATA — unclear on refurb |
+| Max RAM | **64 GB** | **32 GB** (hard ceiling) |
+| Equal config price | ~1,530 RON | ~1,627 RON |
 
-| | |
-|---|---|
-| **Link (Win Home)** | [Lenovo M720q — i5-9400T](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572) — **~1,150 RON** base |
-| **Link (Win Pro)** | [Lenovo M720q — i5-9400T Pro](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77573) — **~1,348 RON** base |
-| **CPU** | Intel Core i5-**9400T** (6 cores, 35 W) |
-| **Recommended config** | +16 GB RAM (+250), +512 GB SSD (+220) → **~1,620 RON** (Home) / **~1,818 RON** (Pro) |
-| **Why** | Explicit **NVMe**; includes keyboard + mouse; 5-star reviews |
-| **Note** | 9400T is slightly older than 9500T — negligible difference for this workload. Prefer Home version if installing Linux (cheaper). |
+The Dell base looks more expensive (~567 RON vs HP base) because it ships **16 GB + 512 GB pre-installed**, not because it is a better platform. It has an **older CPU** and a **lower RAM ceiling**.
 
-## Comparison table
+**Do not assume more expensive = better.** Compare specs at equal RAM/SSD.
 
-| Product | CPU | Base price | Configured (16 GB / 512 GB) | NVMe stated? | 32 GB upgrade? |
-|---------|-----|------------|----------------------------|--------------|----------------|
-| [HP ProDesk 400 G5](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602) | i5-9500T | ~1,060 RON | **~1,530 RON** | Yes (M.2) | No (DIY later) |
-| [Dell OptiPlex 5060](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492) | i5-8500T | ~1,627 RON | **included in base** | Confirm with seller | **Yes (+721 RON)** |
-| [Lenovo M720q](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572) | i5-9400T | ~1,150 RON | **~1,620 RON** | Yes (NVMe) | No (DIY later) |
+### RAM plan (including local AI on this machine)
 
-## Skip list (Interlink)
+| RAM | Use case |
+|-----|----------|
+| **16 GB** (buy now) | Home Assistant + Docker infra — enough to start |
+| **32 GB** (upgrade later) | Add Ollama 7B on the same host |
+| **64 GB** (upgrade later) | Full stack + AI with maximum headroom |
 
-| Product | Link | Why skip |
-|---------|------|----------|
-| HP ProDesk 600 G5 | [i5-9500 (non-T)](https://www.interlink.ro/calculator-refurbished-hp-prodesk-600-g5-minipc-intel-core-i5-95-second-hand-p76608) | **i5-9500** without T — 65 W, not ideal for 24/7; same price band as 400 G5 T-model |
-| HP EliteDesk 800 G8 | [i5-11500 (non-T)](https://www.interlink.ro/calculator-hp-elitedesk-800-g8-mini-pc-intel-core-i5-refurbished-p76200) | **~3,028 RON** for 16 GB / 512 GB max; non-T CPU; no 32 GB option — poor value |
+Only the HP platform supports the 64 GB path. Dell caps at 32 GB regardless of Interlink upgrades (+721 RON).
 
-## Deployment recommendation
+More RAM lets the model fit in memory; it does **not** make CPU inference fast. Slow replies are a CPU/GPU limit, not a reason to pick Dell.
 
-```
-Option A (recommended):  HP ProDesk 400 G5 or Lenovo M720q — 16 GB / 512 GB (~1,530–1,620 RON)
-                         → main server: Home Assistant + Docker infra
-                         → later: second mini PC for Ollama + 7B if needed
+### Also buy (separate from PC)
 
-Option B (one box longer):  Dell OptiPlex 5060 — 16 GB now, upgrade to 32 GB later (~1,627 → ~2,348 RON)
-                         → 32 GB helps RAM pressure; does not fix slow CPU inference for 7B models
-```
-
----
-
-# Questions to Ask Interlink (or any seller)
-
-Call **031.620.73.24** before ordering, especially for the Dell OptiPlex.
-
-### Storage
-
-1. Is the SSD **NVMe M.2** or **2.5" SATA**? (Dell 5060 listing is ambiguous.)
-2. Is there a **second drive bay** or free M.2 slot for adding storage later?
-3. If ordering an SSD upgrade, does it replace the existing drive or add a second one?
-
-### Memory
-
-4. How many **RAM slots** are populated? How many total (usually 2)?
-5. What is the **maximum RAM** supported?
-6. For models without a 32 GB upgrade option: can Interlink install **32 GB** on request, or is DIY upgrade with a purchased SO-DIMM the only path?
-
-### Physical / homelab fit
-
-7. How many **USB ports** (front + back)? Need at least one permanently free for Zigbee coordinator; one for UPS if USB-connected.
-8. Is **Wi-Fi** included? (Not required if using Ethernet.)
-9. Does the unit include a **VESA mount** or bracket?
-
-### Purchase / warranty
-
-10. Can Windows be **removed/replaced with Linux** without affecting warranty?
-11. What exactly is covered under the **36-month warranty** for refurbished units?
-12. If ordering upgrades (RAM/SSD), are they **installed and tested** before shipping?
-
----
-
-# Final Recommendation
-
-## Preferred Option
-
-A refurbished business mini PC matching the [filter checklist](#minimum-requirements-filter-checklist) above.
-
-**Interlink shortlist (pick one):**
-
-1. **[HP ProDesk 400 G5 — i5-9500T](https://www.interlink.ro/calculator-hp-prodesk-400-g5-mini-pc-intel-core-i5-9-refurbished-p76602)** — best value; configure 16 GB + 512 GB M.2 (~1,530 RON)
-2. **[Dell OptiPlex 5060 — i5-8500T](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492)** — best if 32 GB upgrade path matters (~1,627 RON base, already 16/512)
-3. **[Lenovo M720q — i5-9400T](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572)** — solid alternative with explicit NVMe (~1,620 RON configured)
-
-**Target configuration (any seller):**
-
-- **CPU:** Intel Core i5 **T-series** (8500T / 9500T / 10500T) or Ryzen 5 U-series
-- **RAM:** **16 GB minimum**, 32 GB preferred (or separate AI machine later)
-- **Storage:** **512 GB SSD minimum**, NVMe preferred, 1 TB ideal
-
-**Also budget for (not included in PC price):**
-
-- UPS with USB (NUT integration)
+- UPS with USB (NUT)
 - Zigbee USB coordinator (e.g. Sonoff ZBDongle-E, ConBee III)
 
-This configuration is expected to comfortably run:
+---
 
-- Home Assistant
-- 15–30 Docker containers
-- Custom dashboard
-- Home infrastructure services
-- Household wiki
-- Monitoring stack
-- Notification services
+## Rejected alternatives
 
-Local AI (Ollama + 7B) should run on a **dedicated second machine** if response speed matters; the main server focuses on reliability for home automation — low power consumption, high reliability, and room for future expansion.
+| Machine | Why not chosen |
+|---------|----------------|
+| [Dell OptiPlex 5060](https://www.interlink.ro/calculator-dell-optiplex-5060-mini-pc-intel-core-i5-refurbished-p68492) | Older CPU (8500T); 32 GB RAM max; NVMe unconfirmed on listing; higher price at equal config without better platform |
+| [Lenovo M720q](https://www.interlink.ro/pc-lenovo-thinkcentre-m720q-minipc-intel-core-i5-940-refurbished-p77572) | Older CPU (9400T); 32 GB official max (64 GB unofficial); HP is same price with better CPU and 64 GB official support |
+| [HP ProDesk 600 G5 i5-9500](https://www.interlink.ro/calculator-refurbished-hp-prodesk-600-g5-minipc-intel-core-i5-95-second-hand-p76608) | Non-T CPU (65 W) — wrong variant |
+| [HP EliteDesk 800 G8](https://www.interlink.ro/calculator-hp-elitedesk-800-g8-mini-pc-intel-core-i5-refurbished-p76200) | Non-T CPU; ~3,028 RON; poor value |
+
+---
+
+# Platform specs & seller questions (HP)
+
+Official source: [HP ProDesk 400 G5 Mini specifications](https://support.hp.com/document/c06403257)
+
+| Question | Answer (official docs) |
+|----------|------------------------|
+| NVMe or SATA? | **M.2 PCIe NVMe** |
+| Second drive slot? | Yes — 2.5" bay (needs HP bracket on M.2-only configs) |
+| RAM slots / max? | **2× SODIMM, up to 64 GB** |
+| USB ports? | **6** — enough for Zigbee dongle + UPS |
+| Wi-Fi included? | Optional on platform — Ethernet is enough |
+| VESA mount? | Optional accessory — usually not in box |
+
+**Ask Interlink (HP) before ordering:**
+
+1. Does the +512 GB SSD upgrade **replace** the 256 GB drive or add a second drive?
+2. Is RAM **1×8 GB** or **2×4 GB**? (affects cheapest path to 16 GB)
+3. Wi-Fi or VESA included in this refurb unit? (only if you care)
 
 ---
 
