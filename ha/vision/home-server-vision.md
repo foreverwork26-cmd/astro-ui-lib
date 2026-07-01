@@ -1,5 +1,7 @@
 # Home Server Vision
 
+> **Install guides:** procedural steps live in [`../guides/`](../guides/). Start with [Step 01 — OS foundation](../guides/step-01-os-foundation.md). This document is the long-term plan and decisions reference — not the install checklist.
+
 > **Purpose:** Build a reliable, low-power home server that acts as the central hub for home automation, family services and a lightweight local AI assistant.
 >
 > **Out of scope:** NAS, heavy AI workloads, media transcoding, virtualization labs.
@@ -37,6 +39,8 @@ The server should:
 # Phased Roadmap
 
 ## Phase 0 — Foundation
+
+Install guides: [01 OS](../guides/step-01-os-foundation.md) → [02 Docker](../guides/step-02-docker-compose.md) → [03 Home Assistant](../guides/step-03-home-assistant.md)
 
 - Hardware, UPS, OS, Docker Compose, backups to external target, Tailscale
 
